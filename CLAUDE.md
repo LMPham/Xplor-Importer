@@ -36,6 +36,7 @@ Do not silently resolve these in code:
 - staff matching across multiple centres;
 - QKFS to OWNA Kindy Funding column mapping;
 - PrimaryCarerChangeHistory retention;
+- BookingPatternProposal/BookingPatternCreation retention (large approval/versioning history tables with no matching OWNA collection; decide full-history vs. current-state-only);
 - v1 table scope, especially AuditLog, SuperAdmin, and Xplorer;
 - polymorphic created/modified-by links;
 - centre mapping and handling of records with no destination centre.

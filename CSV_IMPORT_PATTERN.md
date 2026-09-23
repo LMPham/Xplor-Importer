@@ -417,3 +417,57 @@ Avoid these unsafe variants:
 6. processing that cannot resume safely after worker restart.
 
 The resulting Xplor design is therefore **one reusable CSV engine, explicit table contracts, table-specific processors, deterministic transformations, and durable run-level orchestration**.
+
+## 9. Memory and Batching
+
+Every table uses the same streaming reader (`ReadCsv<T>` / `IAsyncEnumerable<T>`). There is no per-table exception to how a file is opened or read. What differs by table is **retention**: what, if anything, is kept in memory after a row has been read and processed.
+
+### 9.1 Why retention differs, and why that is not an arbitrary per-table guess
+
+An observed export shows the real shape of this problem:
+
+| Table | Size |
+| --- | --- |
+| LedgerPrimaryCarer | ~2.07 GB |
+| AuditLog | ~1.65 GB |
+| SessionBooking | ~507 MB |
+| BookingPatternProposal | ~305 MB |
+| BookingPatternCreation | ~239 MB |
+| Attendance | ~124 MB |
+| WeeklyBooking | ~65 MB |
+| GuardianScheduledPayment | ~18 MB |
+| All remaining ~39 tables combined (Centre, Room, Fee, Guardian, Child, Educator, RoomCapacity, every `Qkfs*` table, etc.) | < 6 MB combined |
+
+Roughly 96% of export volume sits in five tables. This is not incidental to one sample — it is structural. A reference/dimension table's size is bounded by how many people, places, or things a business has (children, guardians, rooms), which stays in the thousands even at multi-centre scale. A fact/history table's size is bounded by entity count multiplied by time (days x years x sessions), which is unbounded in principle. The retention rule below follows from that structural difference, not from a per-table size guess that could go stale for a larger customer.
+
+### 9.2 The two retention modes
+
+- **Fact/history tables** (`Attendance`, `SessionBooking`, `LedgerPrimaryCarer`, `AuditLog` if in scope, `WeeklyBooking`, `BookingPatternProposal`, `BookingPatternCreation`, `GuardianScheduledPayment`, and any other table whose row count scales with time rather than headcount): read a row, validate, transform, place it in the current bounded write batch, and retain nothing once that batch has flushed. Never accumulate these tables into a `List<T>` for the whole file.
+- **Reference/dimension tables** (`Centre`, `Room`, `Fee`, `Discount`, `Guardian`, `Child`, `Staff`/`Educator`, `RoomCapacity`, the `Qkfs*` tables, and similar): while streaming the table once, build a small retained index for the phase — at minimum a `HashSet<string>` of valid source IDs for foreign-key checks, and a `Dictionary<string, T>` only where a later phase genuinely needs a full-row lookup (for example, denormalizing a room name). This index lives only as long as the phase that depends on it and is proportionate to the table's real size (under a few MB, per the data above).
+
+A fact table is never promoted to the retained-index role, and a reference table never needs bounded-batch treatment on the write side because its total volume does not require it. Do not decide this per table by name; decide it by whether the table's row count is headcount-bound or time-bound.
+
+### 9.3 Why foreign-key validation should use the CSV-derived index, not a live Mongo lookup
+
+An alternative would be validating a fact-table row's foreign keys against OWNA's Mongo collections written by earlier phases (a batched `$in` query per write-batch of distinct referenced IDs), instead of an in-memory CSV-derived index. This was considered and rejected for v1:
+
+- `RunMode.Inspect` must validate the export's internal consistency (headers, PK-before-FK, referential integrity) without depending on a destination database or centre mapping. A Mongo-based check would make `Inspect` require a live OWNA connection it should not need.
+- The CSV-derived index is already cheap: reference tables are proven small (9.1), so building it costs negligible memory and avoids extra round-trips and an ordering dependency on a prior phase having fully committed.
+
+Foreign-key validation therefore happens in two layers: source-side (does the FK exist within the export itself, checked via the CSV-derived index, available in every run mode including `Inspect`), and phase-order-side (a later phase only processes rows whose parent phase completed; an unresolved or rejected parent record is not a target for a child row, per `SYSTEM_ARCHITECTURE.md` section 6's field-ownership rules).
+
+### 9.4 Bounded write batching
+
+For fact/history tables, accumulate `WriteModel<TDocument>` upserts into a bounded buffer, flush via `BulkWriteAsync(..., IsOrdered = false)` when the buffer fills or the stream ends, then clear and continue streaming. A starting batch size of 500-1000 is reasonable and should be tunable per entity (smaller for wider documents, larger for narrow ones such as `Attendance`). Keep a parallel list of source-row identities aligned to each batch's write-model order, so a partial `BulkWriteAsync` failure (`MongoBulkWriteException.WriteErrors[i].Index`) can still be attributed back to the source row for the rejection report. Never defer all writes for a fact table until the end of the file; this is the specific pattern to avoid (see 9.5).
+
+### 9.5 What not to copy from `OWNAxInfoCareIntergration`
+
+That system's fetch services (for example `InfoCareDataFetchService.FetchChildrenAndGuardiansAsync`) accumulate an entire business's dataset into `List<T>` before any Mongo write, and its migration services then issue one unbounded `BulkWriteAsync` per entity type at the end. This is safe there only because a single InfoCare/KidSoft business, fetched from a paginated live API, stays small. It is not safe here: a single Xplor export can contain gigabytes in a handful of tables (9.1), so the fetch-everything-then-write-everything shape must not be reused for those tables, even though its `sourcetype`/`externalid` upsert conventions should be.
+
+### 9.6 ZIP entry access
+
+The manifest reader opens the stored ZIP file from disk (never a `MemoryStream` of the whole archive) and, per table, opens a single `ZipArchiveEntry` stream at a time, passed directly into `ReadCsv<T>`'s `StreamReader`. Never call `ReadToEnd()`/buffer a whole entry into a `string` or `byte[]` first.
+
+### 9.7 Testing implication
+
+Infrastructure tests (`SYSTEM_ARCHITECTURE.md` section 10) should include a large-file/streaming category using synthetic multi-hundred-MB fixtures shaped like `LedgerPrimaryCarer` and `SessionBooking`, in addition to small correctness-focused fixtures. Memory-retention bugs typically pass on a 10-row test file and fail only at real volume.

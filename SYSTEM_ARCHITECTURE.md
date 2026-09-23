@@ -197,6 +197,7 @@ Use synthetic or irreversibly anonymized fixtures only.
 - guardian email conflicts;
 - field ownership and `SetOnInsert` behavior;
 - PrimaryCarerChangeHistory handling;
+- BookingPatternProposal/BookingPatternCreation retention (these two tables are ~305 MB and ~239 MB in an observed export and represent a booking-pattern approval/versioning history OWNA has no matching collection for; decide whether full history is required or only current state, before implementation);
 - QKFS/Kindy mapping;
 - durable queue technology, worker deployment/scaling, and file-retention policy;
 - authentication, roles, and approval evidence;
