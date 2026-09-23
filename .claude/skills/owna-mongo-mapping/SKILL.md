@@ -11,7 +11,7 @@ Create an evidence-backed mapping from normalized Xplor tables to OWNA's denorma
 
 ## Evidence hierarchy
 
-1. `SYSTEM_ARCHITECTURE.md` for project boundaries and non-negotiable constraints.
+1. `docs/SYSTEM_ARCHITECTURE.md` for project boundaries and non-negotiable constraints.
 2. Existing OWNA production read/write code and established migration services for destination field contracts.
 3. Approved mapping and decision artifacts for this importer.
 4. Existing tests and representative, redacted documents.

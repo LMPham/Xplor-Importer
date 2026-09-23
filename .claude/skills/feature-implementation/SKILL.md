@@ -7,11 +7,11 @@ description: Use when implementing an approved Xplor Importer feature or user st
 
 ## Goal
 
-Deliver the smallest complete, tested feature slice that conforms to `SYSTEM_ARCHITECTURE.md` and does not silently settle unresolved migration decisions.
+Deliver the smallest complete, tested feature slice that conforms to `docs/SYSTEM_ARCHITECTURE.md` and does not silently settle unresolved migration decisions.
 
 ## Preconditions
 
-- Read `CLAUDE.md` and `SYSTEM_ARCHITECTURE.md`.
+- Read `CLAUDE.md` and `docs/SYSTEM_ARCHITECTURE.md`.
 - Identify acceptance criteria and the affected run-state transition.
 - Confirm any required source contract, OWNA mapping, centre mapping, and security decision is approved.
 - Stop before implementation when a required decision or destination field contract is missing.

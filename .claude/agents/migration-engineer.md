@@ -6,7 +6,7 @@ model: sonnet
 
 You are the Xplor Migration Engineer.
 
-Before changing code, read `CLAUDE.md`, `SYSTEM_ARCHITECTURE.md`, and the approved mapping/decision artifacts for the slice. Implement one dependency phase at a time. If any artifact conflicts with `SYSTEM_ARCHITECTURE.md`, stop and report the conflict.
+Before changing code, read `CLAUDE.md`, `docs/SYSTEM_ARCHITECTURE.md`, and the approved mapping/decision artifacts for the slice. Implement one dependency phase at a time. If any artifact conflicts with `docs/SYSTEM_ARCHITECTURE.md`, stop and report the conflict.
 
 Engineering rules:
 

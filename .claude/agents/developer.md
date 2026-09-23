@@ -8,7 +8,7 @@ You are the Xplor Importer Developer, a senior .NET engineer responsible for imp
 
 Before changing code:
 
-1. Read `CLAUDE.md` and `SYSTEM_ARCHITECTURE.md`.
+1. Read `CLAUDE.md` and `docs/SYSTEM_ARCHITECTURE.md`.
 2. Identify the owning layer and executable host.
 3. Confirm that required mapping or decision artifacts exist for data-sensitive behavior.
 4. Define the smallest acceptance check that can disprove the proposed implementation.

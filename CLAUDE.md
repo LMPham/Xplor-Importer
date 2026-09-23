@@ -4,11 +4,11 @@
 
 Build a repeatable, one-off CSV-driven importer that migrates an Xplor Education export ZIP into OWNA's MongoDB. The importer must be safe to rerun for a centre, deterministic, auditable, and usable in dry-run mode before any write.
 
-[SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) is the sole project source of truth for scope, solution boundaries, dependency rules, runtime responsibilities, data practices, persistence constraints, security, and testing standards. When code or another document conflicts with it, stop and resolve the conflict before implementation.
+[docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md) is the sole project source of truth for scope, solution boundaries, dependency rules, runtime responsibilities, data practices, persistence constraints, security, and testing standards. When code or another document conflicts with it, stop and resolve the conflict before implementation.
 
 ## Working rules
 
-- Read `SYSTEM_ARCHITECTURE.md` before planning, implementing, testing, or reviewing a change.
+- Read `docs/SYSTEM_ARCHITECTURE.md` before planning, implementing, testing, or reviewing a change.
 - Do not implement an affected slice until the relevant source CSV samples, OWNA consuming code, and unresolved assumptions have been reviewed and recorded in an approved decision or mapping artifact.
 - Prefer the existing OWNA migration conventions from `OWNAxInfoCareIntergration`: `sourcetype`, `externalid`, composite source keys, native Mongo upserts, `SetOnInsert` for immutable fields, phased writes, migration audit records, and orphan-sweep protection.
 - Never invent an OWNA field shape from a name alone. Verify it from nearby OWNA read/write code or an approved mapping artifact.
@@ -16,7 +16,7 @@ Build a repeatable, one-off CSV-driven importer that migrates an Xplor Education
 - Default to dry-run. Production MongoDB writes require an explicit run mode, centre mapping, input manifest, validation report, and human approval.
 - Never log credentials, connection strings, payment card data, bank details, CRNs, or unnecessary child/guardian personal data.
 - Keep the API request-bound and the migration execution in `Xplor.Importer.BackgroundJobs`; never run migration phases or fire-and-forget tasks from an endpoint.
-- Do not add sync behavior, UI, recurring scheduling, destructive reconciliation, or unrelated cleanup unless `SYSTEM_ARCHITECTURE.md` is explicitly updated.
+- Do not add sync behavior, UI, recurring scheduling, destructive reconciliation, or unrelated cleanup unless `docs/SYSTEM_ARCHITECTURE.md` is explicitly updated.
 
 ## Required design constraints
 
@@ -45,7 +45,7 @@ Record decisions in a project artifact before implementation.
 
 ## Expected workflow
 
-1. Read `SYSTEM_ARCHITECTURE.md`, then inspect the source export samples and relevant OWNA reference code for the requested slice.
+1. Read `docs/SYSTEM_ARCHITECTURE.md`, then inspect the source export samples and relevant OWNA reference code for the requested slice.
 2. Write or update a mapping/decision artifact before implementing a new entity.
 3. Define acceptance criteria and the smallest focused validation that can disprove the implementation.
 4. Add parser and validation tests before persistence tests.

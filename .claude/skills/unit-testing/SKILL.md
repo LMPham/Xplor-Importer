@@ -11,7 +11,7 @@ Provide fast, deterministic tests that prove business behavior without filesyste
 
 ## Workflow
 
-1. Read `CLAUDE.md`, `SYSTEM_ARCHITECTURE.md`, and the behavior under test.
+1. Read `CLAUDE.md`, `docs/SYSTEM_ARCHITECTURE.md`, and the behavior under test.
 2. Identify the observable contract, important invariant, and failure boundary.
 3. Follow the repository's existing test framework, naming, assertion, and fixture conventions.
 4. Arrange inputs with builders or fixtures only when they reduce meaningful duplication.

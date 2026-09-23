@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the CSV parsing, validation, transformation, and persistence pattern for the Xplor importer. Read it together with `SYSTEM_ARCHITECTURE.md`.
+This document defines the CSV parsing, validation, transformation, and persistence pattern for the Xplor importer. Read it together with `docs/SYSTEM_ARCHITECTURE.md`.
 
 The pattern is:
 
@@ -454,7 +454,7 @@ An alternative would be validating a fact-table row's foreign keys against OWNA'
 - `RunMode.Inspect` must validate the export's internal consistency (headers, PK-before-FK, referential integrity) without depending on a destination database or centre mapping. A Mongo-based check would make `Inspect` require a live OWNA connection it should not need.
 - The CSV-derived index is already cheap: reference tables are proven small (9.1), so building it costs negligible memory and avoids extra round-trips and an ordering dependency on a prior phase having fully committed.
 
-Foreign-key validation therefore happens in two layers: source-side (does the FK exist within the export itself, checked via the CSV-derived index, available in every run mode including `Inspect`), and phase-order-side (a later phase only processes rows whose parent phase completed; an unresolved or rejected parent record is not a target for a child row, per `SYSTEM_ARCHITECTURE.md` section 6's field-ownership rules).
+Foreign-key validation therefore happens in two layers: source-side (does the FK exist within the export itself, checked via the CSV-derived index, available in every run mode including `Inspect`), and phase-order-side (a later phase only processes rows whose parent phase completed; an unresolved or rejected parent record is not a target for a child row, per `docs/SYSTEM_ARCHITECTURE.md` section 6's field-ownership rules).
 
 ### 9.4 Bounded write batching
 
@@ -470,4 +470,4 @@ The manifest reader opens the stored ZIP file from disk (never a `MemoryStream` 
 
 ### 9.7 Testing implication
 
-Infrastructure tests (`SYSTEM_ARCHITECTURE.md` section 10) should include a large-file/streaming category using synthetic multi-hundred-MB fixtures shaped like `LedgerPrimaryCarer` and `SessionBooking`, in addition to small correctness-focused fixtures. Memory-retention bugs typically pass on a 10-row test file and fail only at real volume.
+Infrastructure tests (`docs/SYSTEM_ARCHITECTURE.md` section 10) should include a large-file/streaming category using synthetic multi-hundred-MB fixtures shaped like `LedgerPrimaryCarer` and `SessionBooking`, in addition to small correctness-focused fixtures. Memory-retention bugs typically pass on a 10-row test file and fail only at real volume.
