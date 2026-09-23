@@ -47,6 +47,7 @@ flowchart LR
     APP --> CORE
 ```
 
+- Target framework: `net10.0` for every project in `src/` and `tests/`. .NET 10 is a Long-Term-Support release; pin the SDK version in `global.json`.
 - `Core` defines entities, value objects, enums, invariants, and import-run state. It has no HTTP, CSV, MongoDB, logging, or configuration dependencies.
 - `Application` defines use cases, mapping, validation, phase orchestration, and ports.
 - `Infrastructure` implements file storage, ZIP/CSV parsing, MongoDB persistence, run locking, and reports.
