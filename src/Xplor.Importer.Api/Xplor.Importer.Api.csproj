@@ -5,4 +5,9 @@
     <ProjectReference Include="..\Xplor.Importer.Infrastructure\Xplor.Importer.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+  </ItemGroup>
+
 </Project>

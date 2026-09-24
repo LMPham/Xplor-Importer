@@ -146,7 +146,8 @@ Every other OWNA repo on this machine was checked for committed development port
 
 ## 8. `Xplor.Importer.Api` contents
 
-- `Program.cs`: minimal hosting model, `WebApplication.CreateBuilder` / `MapGet("/health", ...)` returning `200 OK` with a small JSON body (status, UTC timestamp). No controllers, no OpenAPI/Swagger UI beyond whatever the default template wires up, no authentication, no other endpoints.
+- `Program.cs`: minimal hosting model, `WebApplication.CreateBuilder` / `MapGet("/health", ...)` returning `200 OK` with a small JSON body (status, UTC timestamp). No controllers, no authentication, no other endpoints.
+- Updated after this plan's initial implementation, by explicit request: `builder.Services.AddOpenApi()` + `Scalar.AspNetCore`'s `MapScalarApiReference()` are wired up, but gated behind `app.Environment.IsDevelopment()` — the OpenAPI document (`/openapi/v1.json`) and the Scalar UI (`/scalar/v1`) only exist in Development; outside Development the same branch instead calls `app.UseHsts()` / `app.UseHttpsRedirection()`. `/health` itself is unconditional in both environments. Verified at runtime: in Development, `/health`, `/openapi/v1.json`, and `/scalar/v1` all return `200`; with `ASPNETCORE_ENVIRONMENT=Production`, `/health` still returns `200` and `/scalar/v1` correctly returns `404`. `launchSettings.json`'s `launchUrl` points at `scalar/v1` accordingly. This is dev-tooling/API documentation, not application business logic, so it doesn't conflict with this phase's "no business logic" scope — but it is a genuine (small) addition beyond what this plan originally scoped out, recorded here rather than silently.
 - `Properties/launchSettings.json`: `http` and `https` profiles on the ports in section 7. `ASPNETCORE_ENVIRONMENT=Development`.
 - `appsettings.json` / `appsettings.Development.json`: present but empty of anything beyond default logging configuration — no MongoDB connection string, no queue configuration yet.
 
