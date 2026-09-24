@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Xplor.Importer.Core\Xplor.Importer.Core.csproj" />
+  </ItemGroup>
+
+</Project>

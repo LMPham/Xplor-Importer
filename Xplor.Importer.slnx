@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Xplor.Importer.Api/Xplor.Importer.Api.csproj" />
+    <Project Path="src/Xplor.Importer.Application/Xplor.Importer.Application.csproj" />
+    <Project Path="src/Xplor.Importer.BackgroundJobs/Xplor.Importer.BackgroundJobs.csproj" />
+    <Project Path="src/Xplor.Importer.Core/Xplor.Importer.Core.csproj" />
+    <Project Path="src/Xplor.Importer.Infrastructure/Xplor.Importer.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Xplor.Importer.Api.Tests/Xplor.Importer.Api.Tests.csproj" />
+    <Project Path="tests/Xplor.Importer.Application.Tests/Xplor.Importer.Application.Tests.csproj" />
+    <Project Path="tests/Xplor.Importer.BackgroundJobs.Tests/Xplor.Importer.BackgroundJobs.Tests.csproj" />
+    <Project Path="tests/Xplor.Importer.Core.Tests/Xplor.Importer.Core.Tests.csproj" />
+    <Project Path="tests/Xplor.Importer.Infrastructure.Tests/Xplor.Importer.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

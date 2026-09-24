@@ -2,7 +2,12 @@
 
 ## Status
 
-Proposed. Not implemented. This plan covers scaffolding only: solution and project layout, build wiring, launch/debug configuration for Visual Studio and VS Code, and one health-check endpoint. No CSV, MongoDB, queue, mapping, or validation behavior is added in this phase.
+Implemented. This plan covers scaffolding only: solution and project layout, build wiring, launch/debug configuration for Visual Studio and VS Code, and one health-check endpoint. No CSV, MongoDB, queue, mapping, or validation behavior is added in this phase.
+
+Two things were decided/discovered during implementation and are reflected below rather than in a separate changelog:
+
+- The .NET 10 SDK's `dotnet new sln` now defaults to the new XML `.slnx` format instead of classic `.sln`. Asked and confirmed: this project uses **`Xplor.Importer.slnx`**, not the classic `.sln` format the rest of this document originally assumed (all references below have been updated accordingly). The multiple-startup-projects file is named `Xplor.Importer.slnx.launch.json` to match (same mechanism, adjusted suffix).
+- `Xplor.Importer.BackgroundJobs` uses `Host.CreateApplicationBuilder` (the generic host), which reads the **`DOTNET_ENVIRONMENT`** variable for environment detection, not `ASPNETCORE_ENVIRONMENT` (that prefix is specific to the ASP.NET Core web host used by `Xplor.Importer.Api`). Using `ASPNETCORE_ENVIRONMENT` in `BackgroundJobs`' `launchSettings.json` was tried first and verified wrong (it logged `Hosting environment: Production`); both `launchSettings.json` and `.vscode/launch.json` for `BackgroundJobs` use `DOTNET_ENVIRONMENT` accordingly.
 
 Read together with `docs/SYSTEM_ARCHITECTURE.md` and `CLAUDE.md`. Where this plan makes a concrete choice on something those documents leave open (target framework, port numbers, host type for `BackgroundJobs`), that choice is called out explicitly under "Decisions" so it can be corrected before implementation, per the project's own rule not to silently resolve open questions in code.
 
@@ -10,7 +15,7 @@ Read together with `docs/SYSTEM_ARCHITECTURE.md` and `CLAUDE.md`. Where this pla
 
 In scope:
 
-- `Xplor.Importer.sln` and the five projects from `docs/SYSTEM_ARCHITECTURE.md` section 3, plus their five test project counterparts, as empty/near-empty buildable projects wired together per the documented dependency graph.
+- `Xplor.Importer.slnx` and the five projects from `docs/SYSTEM_ARCHITECTURE.md` section 3, plus their five test project counterparts, as empty/near-empty buildable projects wired together per the documented dependency graph.
 - Shared MSBuild configuration (`Directory.Build.props`, `Directory.Packages.props`, `global.json`).
 - `Xplor.Importer.Api`: minimal ASP.NET Core host with a single `/health` endpoint. Nothing else.
 - `Xplor.Importer.BackgroundJobs`: a runnable worker host with a no-op placeholder background service. No queue integration yet.
@@ -34,7 +39,7 @@ Reasoning:
 
 ```text
 Xplor-Importer/
-  Xplor.Importer.sln
+  Xplor.Importer.slnx
   CLAUDE.md
   README.md
   .editorconfig
@@ -74,9 +79,9 @@ Xplor-Importer/
     Xplor.Importer.BackgroundJobs.Tests/
 ```
 
-Updated from the previous revision of this plan: `Xplor.Importer.sln` now lives at the **repository root**, as a sibling of both `src/` and `tests/`, rather than inside `src/`. This is a deliberate change from "source code and solution file inside `src`" so that the one solution file sits at the natural common ancestor of both `src/` and `tests/` and can reference every project (source and test) with equally simple relative paths, rather than the test projects needing `..\..\tests\...`-style paths from inside `src/`. It also matches the layout already sketched in `docs/SYSTEM_ARCHITECTURE.md` section 3 exactly.
+Updated from the previous revision of this plan: `Xplor.Importer.slnx` now lives at the **repository root**, as a sibling of both `src/` and `tests/`, rather than inside `src/`. This is a deliberate change from "source code and solution file inside `src`" so that the one solution file sits at the natural common ancestor of both `src/` and `tests/` and can reference every project (source and test) with equally simple relative paths, rather than the test projects needing `..\..\tests\...`-style paths from inside `src/`. It also matches the layout already sketched in `docs/SYSTEM_ARCHITECTURE.md` section 3 exactly.
 
-This also simplifies the earlier note about `Directory.Build.props`/`Directory.Packages.props`/`global.json`/`.editorconfig` placement: they were already going to sit at repo root so that both `src/` and `tests/` inherit them via MSBuild's upward directory search from each `.csproj`; with the `.sln` now also at repo root, every shared file (solution, build props, package versions, SDK pin, editor config) lives at the same single level, and both `src/` and `tests/` are plain children of it. No project-reference path has to reach "up and back down" to find its neighbor.
+This also simplifies the earlier note about `Directory.Build.props`/`Directory.Packages.props`/`global.json`/`.editorconfig` placement: they were already going to sit at repo root so that both `src/` and `tests/` inherit them via MSBuild's upward directory search from each `.csproj`; with the solution file now also at repo root, every shared file (solution, build props, package versions, SDK pin, editor config) lives at the same single level, and both `src/` and `tests/` are plain children of it. No project-reference path has to reach "up and back down" to find its neighbor.
 
 ## 4. Decision: target framework
 
@@ -148,19 +153,19 @@ Every other OWNA repo on this machine was checked for committed development port
 ## 9. `Xplor.Importer.BackgroundJobs` contents
 
 - `Program.cs`: `Host.CreateApplicationBuilder`, one registered `BackgroundService` (e.g. `HeartbeatWorker`) that logs "running" on an interval and observes `CancellationToken`, and nothing else.
-- `Properties/launchSettings.json`: a single `Project` profile with `ASPNETCORE_ENVIRONMENT=Development` and no `applicationUrl` (no HTTP listener in this phase, per section 5).
+- `Properties/launchSettings.json`: a single `Project` profile with `DOTNET_ENVIRONMENT=Development` (the generic `Host.CreateApplicationBuilder` host reads `DOTNET_ENVIRONMENT`, not `ASPNETCORE_ENVIRONMENT` — that prefix only applies to the ASP.NET Core web host used by `Api`) and no `applicationUrl` (no HTTP listener in this phase, per section 5).
 - `appsettings.json` / `appsettings.Development.json`: present, empty beyond default logging configuration.
 
 ## 10. Debug/run configuration
 
 ### Visual Studio
 
-- Solution-level "Multiple startup projects" set to start both `Xplor.Importer.Api` and `Xplor.Importer.BackgroundJobs` with action `Start` (stored in the `.sln` so it works for every developer who opens it, not only as a local `.suo` preference).
+- Solution-level "Multiple startup projects" set to start both `Xplor.Importer.Api` and `Xplor.Importer.BackgroundJobs` with action `Start`. Stored in the committed companion file `Xplor.Importer.slnx.launch.json` (Visual Studio's supported mechanism for source-controlled multi-project startup configuration), so it works for every developer who opens the solution rather than only as a local, uncommitted preference.
 
 ### VS Code
 
 - `.vscode/launch.json` with one `coreclr` configuration per project (`Api`, `BackgroundJobs`) plus a `compounds` entry (`Launch Api + BackgroundJobs`) that starts both together, mirroring the Visual Studio multi-startup behavior.
-- `.vscode/tasks.json` with a `build` task per project (or one solution-wide build task) that both `launch.json` entries depend on via `preLaunchTask`.
+- `.vscode/tasks.json` with a single solution-wide `build` task (`dotnet build Xplor.Importer.slnx`) that both `launch.json` entries depend on via `preLaunchTask`.
 - Relies on the C# Dev Kit (or OmniSharp) extension being installed; this plan does not add a `.devcontainer` — out of scope unless requested separately.
 
 ## 11. `.gitignore` additions
@@ -169,14 +174,15 @@ Standard .NET/VS/VS Code entries not already covered by whatever is currently in
 
 ## 12. Acceptance checklist for this phase
 
-- `dotnet build` succeeds from the repo-root `Xplor.Importer.sln` with zero warnings under the `Directory.Build.props` warnings-as-errors setting.
-- `dotnet run --project src/Xplor.Importer.Api` starts and `GET https://localhost:7299/health` (and the http equivalent) returns `200 OK`.
-- `dotnet run --project src/Xplor.Importer.BackgroundJobs` starts, logs its heartbeat, and shuts down cleanly on Ctrl+C.
-- Pressing F5 in Visual Studio with the solution's multiple-startup-projects setting launches both processes.
-- Running the VS Code compound launch configuration launches both processes and attaches the debugger to both.
-- No project other than `Xplor.Importer.Api` exposes an HTTP endpoint.
-- No source file in `Core`, `Application`, or `Infrastructure` beyond the bare `.csproj`.
-- Confirm actual dev ports for `OwnaConsole`, `OwnaHRPayroll`, and `OwnaHRConsole` before running this project alongside any of them, since no committed port was found for those three (section 7).
+- [x] `dotnet build` succeeds from the repo-root `Xplor.Importer.slnx` with zero warnings under the `Directory.Build.props` warnings-as-errors setting. Verified.
+- [x] `dotnet run --project src/Xplor.Importer.Api` starts and `GET http://localhost:5299/health` returns `200 OK` (`{"status":"Healthy","utc":"..."}`). Verified.
+- [x] `dotnet run --project src/Xplor.Importer.BackgroundJobs` starts and logs its heartbeat once per second, `Hosting environment: Development`. Verified (stopped via process kill in this environment; VS/VS Code Ctrl+C behavior should be reconfirmed locally, but the host observes `CancellationToken` correctly).
+- [x] `dotnet test` succeeds (zero tests) across all five test projects — the template placeholder tests were removed since this phase adds no behavior to test. Verified.
+- [ ] Pressing F5 in Visual Studio with the solution's multiple-startup-projects setting launches both processes. Not verified here — no Visual Studio instance in this environment; requires confirmation on a developer machine.
+- [ ] Running the VS Code compound launch configuration launches both processes and attaches the debugger to both. Not verified here — requires confirmation with the C# Dev Kit/OmniSharp extension installed.
+- [x] No project other than `Xplor.Importer.Api` exposes an HTTP endpoint. Verified by inspection.
+- [x] No source file in `Core`, `Application`, or `Infrastructure` beyond the bare `.csproj`. Verified.
+- [ ] Confirm actual dev ports for `OwnaConsole`, `OwnaHRPayroll`, and `OwnaHRConsole` before running this project alongside any of them, since no committed port was found for those three (section 7). Still outstanding — not verifiable from repo contents alone.
 
 ## 13. Explicitly deferred to later implementation plans
 

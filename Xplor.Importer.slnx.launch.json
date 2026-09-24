@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "Api + BackgroundJobs": {
+      "projects": {
+        "src/Xplor.Importer.Api/Xplor.Importer.Api.csproj": {
+          "action": "Start"
+        },
+        "src/Xplor.Importer.BackgroundJobs/Xplor.Importer.BackgroundJobs.csproj": {
+          "action": "Start"
+        }
+      }
+    }
+  }
+}

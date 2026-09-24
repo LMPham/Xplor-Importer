@@ -1,0 +1,45 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Api",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Xplor.Importer.Api/bin/Debug/net10.0/Xplor.Importer.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Xplor.Importer.Api",
+      "console": "integratedTerminal",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/health"
+      }
+    },
+    {
+      "name": "BackgroundJobs",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Xplor.Importer.BackgroundJobs/bin/Debug/net10.0/Xplor.Importer.BackgroundJobs.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Xplor.Importer.BackgroundJobs",
+      "console": "integratedTerminal",
+      "stopAtEntry": false,
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Launch Api + BackgroundJobs",
+      "configurations": ["Api", "BackgroundJobs"],
+      "stopAll": true
+    }
+  ]
+}
