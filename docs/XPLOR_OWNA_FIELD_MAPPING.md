@@ -2,7 +2,7 @@
 
 > **Status:** Draft analysis — **not an approved mapping artifact**. Every row marked ⚠ is an open decision that must be approved before its mapper is implemented (see `CLAUDE.md` → *Non-negotiable open decisions* and `docs/SYSTEM_ARCHITECTURE.md` §11).
 >
-> **Export analysed:** `xplor_report_db_2026-05-19-13_39_17_full` (49 CSV tables, ~5.3 GB, one Provider, 18 Centers). Large tables were profiled from the first ~40 MB (ledger also at 25/50/75/97% offsets); "est." row counts are extrapolated from bytes-per-row. Small tables were profiled in full. No customer values are reproduced in this document beyond non-identifying codes and enum values.
+> **Export analysed:** `xplor_report_db_2026-05-19-13_39_17_full` (48 CSV tables, ~5.3 GB, one Provider, 18 Centers). Large tables were profiled from the first ~40 MB (ledger also at 25/50/75/97% offsets); "est." row counts are extrapolated from bytes-per-row. Small tables were profiled in full. No customer values are reproduced in this document beyond non-identifying codes and enum values.
 >
 > **OWNA evidence:** code in `OwnaHQ`, `OwnaWCF`, `Portal`, `OwnaConsole`, `OWNAxInfoCareIntergration`, plus a read-only shape sample of the `childcare` database on OWNADEV (400-document `$sample` per collection).
 
@@ -56,7 +56,7 @@ Conventions used in the tables:
 | 4 | CenterUser | 18 | — | ❌ No centre-login concept in OWNA |
 | 5 | ProviderUser | 109 | `superusers` + `staff` | ⚠ Partial (identity decision) |
 | 6 | ProviderUserCenter | 534 | `superusers.credentials[]` | ⚠ Partial |
-| 7 | SuperAdmin | 6 | — | ❌ Xplor vendor/API accounts |
+| 7 | SuperAdmin | 6 | — | ❌ Provider super-admin / API accounts (lookup only) |
 | 8 | Xplorer | 2,338 | — | ❌ Xplor consumer-app identities |
 | 9 | Educator | 669 | `staff` (+ `staffdocuments`) | ⚠ Mapped, **no centre link in source** |
 | 10 | Room | 96 | `rooms` | ✅ Mapped |
@@ -75,24 +75,25 @@ Conventions used in the tables:
 | 23 | GuardianChild | 7,865 | `relationship` | ✅ Mapped |
 | 24 | EmergencyContact | 4,751 | `relationship` (+ non-login `parents`) or `children.emergency1/2` | ⚠ Decision |
 | 25 | PrimaryCarerChangeHistory | 275 | — | ❌ No history store (open decision) |
-| 26 | (derived) Family | — | `families` | 🔁 Derived from GuardianChild |
-| 27 | BookingPattern | 6,305 | `enrolments` + `children` pattern | 🔁 Mapped |
-| 28 | BookingPatternProposal | ~3.0 M est. (320 MB) | — | ❌/⚠ Retention decision |
-| 29 | BookingPatternCreation | ~2.7 M est. (251 MB) | — | ❌/⚠ Retention decision |
-| 30 | WeeklyBooking | ~0.8 M est. (68 MB) | — (join table only) | 🔁 Used for child resolution only |
-| 31 | SessionBooking | ~3.9 M est. (531 MB) | `attendances` | 🔁 Mapped |
-| 32 | Attendance | ~1.0 M est. (130 MB) | `attendances` (merge into SessionBooking doc) | 🔁 Mapped |
-| 33 | ParentBookingRequest | 33,206 | `casualbookings` / `enrolments` (partial) | ⚠ Mostly not imported |
-| 34 | EducatorBookingRequest | 4,827 | — | ❌ No OWNA equivalent |
-| 35 | LedgerPrimaryCarer | ~5.5 M est. (2.2 GB) | `familiestransactions` | ⚠ Opening balance vs full ledger |
-| 36 | GuardianPaymentPlan | 3,145 | `families` (debit settings) | 🔁 Partial |
-| 37 | GuardianScheduledPayment | 122,061 | — | ❌ Gateway history; not re-playable |
-| 38 | BondPayment | 0 | `bond` | Empty in this export (mapping defined) |
-| 39–45 | Qkfs* (7 tables) | 0 | Kindy funding | Empty in this export — see §12 |
-| 46 | Country | 251 | `countries` (lookup only) | 🔁 Lookup, not imported |
-| 47 | State | 4,254 | — | ❌ No `states` collection; used as lookup only |
-| 48 | Currency | 4 | — | ❌ OWNA has no currency model |
-| 49 | AuditLog | ~3.0 M est. (1.8 GB) | — | ❌ Not imported (v1 scope) |
+| 26 | BookingPattern | 6,305 | `enrolments` + `children` pattern | 🔁 Mapped |
+| 27 | BookingPatternProposal | ~3.0 M est. (320 MB) | — | ❌/⚠ Retention decision |
+| 28 | BookingPatternCreation | ~2.7 M est. (251 MB) | — | ❌/⚠ Retention decision |
+| 29 | WeeklyBooking | ~0.8 M est. (68 MB) | — (join table only) | 🔁 Used for child resolution only |
+| 30 | SessionBooking | ~3.9 M est. (531 MB) | `attendances` | 🔁 Mapped |
+| 31 | Attendance | ~1.0 M est. (130 MB) | `attendances` (merge into SessionBooking doc) | 🔁 Mapped |
+| 32 | ParentBookingRequest | 33,206 | `casualbookings` / `enrolments` (partial) | ⚠ Mostly not imported |
+| 33 | EducatorBookingRequest | 4,827 | — | ❌ No OWNA equivalent |
+| 34 | LedgerPrimaryCarer | ~5.5 M est. (2.2 GB) | `familiestransactions` | ⚠ Opening balance vs full ledger |
+| 35 | GuardianPaymentPlan | 3,145 | `families` (debit settings) | 🔁 Partial |
+| 36 | GuardianScheduledPayment | 122,061 | — | ❌ Gateway history; not re-playable |
+| 37 | BondPayment | 0 | `bond` | Empty in this export (mapping defined) |
+| 38–44 | Qkfs* (7 tables) | 0 | Kindy funding | Empty in this export — see §12 |
+| 45 | Country | 251 | `countries` (lookup only) | 🔁 Lookup, not imported |
+| 46 | State | 4,254 | — | ❌ No `states` collection; used as lookup only |
+| 47 | Currency | 4 | — | ❌ OWNA has no currency model |
+| 48 | AuditLog | ~3.0 M est. (1.8 GB) | — | ❌ Not imported (v1 scope) |
+
+OWNA `families` has **no source CSV**. It is derived from GuardianChild and the primary carer (§8.7).
 
 ---
 
@@ -122,6 +123,7 @@ flowchart LR
   end
 
   Provider --> centregroups
+  Provider -.approved provider contact.-> centres
   Center --> centres
   CenterDetails --> centres
   ProviderUser --> superusers
@@ -260,9 +262,10 @@ Every centre-scoped row must resolve its `center_id` through the approved **cent
 | suburb | `suburb` | ✅ |
 | state_id | `state` | 🔁 State lookup → abbreviation. |
 | postcode | `postcode` | ✅ string. |
-| contact_email_address | `email` | ✅ lower-case. |
-| contact_phone_number | `phone` | ✅ |
-| contact_first_name / contact_last_name | `accountname` | ⚠ only if the group's billing contact should be this person. |
+| contact_email_address | `email` **and** `centres.approvedprovider.email` | 🔁 lower-case, trimmed. Written to the group and to every imported centre of this provider (see *Provider contact* below). |
+| contact_phone_number | `phone` **and** `centres.approvedprovider.phone` | 🔁 trimmed. Written to the group and to every imported centre of this provider. |
+| contact_first_name + contact_last_name | `centres.approvedprovider.contact` | 🔁 `"{first} {last}"`, trimmed, single-spaced. Centres only: `centregroups` has no contact-name field. |
+| — | `accountname`, `accountemail` | ❌ **Never set by the importer.** These fields are OWNA's own subscription-billing contact. `accountemail` is where OWNA's SaaS invoices are emailed (`OwnaConsole/_o_/app-invoices.aspx.cs:201-202, 558, 1150-1182`). OWNA staff enter them in Console (`group-edit.aspx.cs:115-116`). |
 | country_id | — | ❌ `centregroups` has no country field. |
 | currency_id | — | ❌ OWNA has no currency model (value is `0` anyway). |
 | abn | — (`centres.abn`) | 🔁 OWNA stores ABN on **centres**, not groups; copy to each centre only if `Center` has none (empty in this export). |
@@ -270,7 +273,20 @@ Every centre-scoped row must resolve its `center_id` through the approved **cent
 | date_created | `dateadded` | ✅ `SetOnInsert`. |
 | date_last_modified, exportdb_last_run_at | — | ❌ source housekeeping. |
 
-If the operator maps the Provider to an **existing** OWNA group, do not overwrite `name/description`; only stamp nothing (the group is not Xplor-owned). ⚠
+**Provider contact.** The Xplor Provider is the CCS Approved Provider. Its contact person is copied to two places:
+
+| Target | Fields | Why |
+|---|---|---|
+| `centregroups` | `email`, `phone` | Group reference record, shown and edited only on the Console group page (`group-edit.aspx.cs:62-63, 114, 117`). No feature reads these fields. |
+| `centres.approvedprovider` (each imported centre) | `contact`, `phone`, `email` | The "Approved Provider" block (Primary Contact / Phone / Email) on Portal Centre Info (`centre-info.aspx:303-307`, written at `centre-info.aspx.cs:380-382`). |
+
+Write rules:
+- **Group:** set `email`/`phone` when the group is Xplor-created. For an existing OWNA group mapped by the operator, set each field only if it is empty.
+- **Centres:** write the `approvedprovider` block only when the centre has no `approvedprovider` value yet. Existing OWNA values are never overwritten.
+- **All-or-nothing:** write the three centre fields together. If any of name, phone or email is blank, skip the block and log the warning `ApprovedProviderContactIncomplete`.
+- Blank source values are omitted, never written as `""`.
+
+If the operator maps the Provider to an **existing** OWNA group, do not overwrite `name`/`description`, and do not stamp `sourcetype`/`externalid` on it: the group is not Xplor-owned. Contact fields follow the empty-only rule above. ⚠
 
 ### 5.2 Center.csv + CenterDetails.csv → `centres`
 
@@ -280,11 +296,12 @@ Only centres present in the approved centre mapping are imported. Four source ce
 |---|---|---|
 | Center.id | `externalid` | ✅ |
 | Center.provider_id | `groupid`, `group` | 🔁 resolve centregroup → `_id` hex and name. |
-| name | `name` | ✅ |
-| username | `alias` | ⚠ OWNA alias = login URL slug (lowercase alphanumeric, must be unique). Generate from name; do not trust source uniqueness. |
-| account_manager | — | ❌ Xplor CRM field. |
-| type (`LDC`, `Hybrid`) | `servicetype` | 🔁 `LDC→LDC`; `Hybrid` ⚠ has no OWNA value (`LDC, LDCBASC, OSHC, Preschool, FDC, IHC, Partnerships`) — operator must choose. |
-| submission_type (`fees`/`room`) | — | ❌ Xplor CCS submission mode. |
+| name | `name` | ✅ Block duplicate name in same state |
+| username | — | ❌ This is the login username of the centre's shared Xplor account, copied from `CenterUser.username` (identical for 18/18 centres; §5.3). OWNA has no shared centre login, so there is nothing to map it to. **Not** `centres.alias`: the alias is the centre's URL slug (lower-case letters and digits), not an account username, and source values such as `Woodlands-StKildaRoadNEW` or an email address break the alias rules. |
+| — | `alias` | 🔁 Centres pre-created in Console keep their existing alias. For a centre the importer creates, generate the alias from `name` using OWNA's rules (lower-case alphanumeric, unique across `centres`; `CentreMigrationService.cs:293-308`). |
+| account_manager | — | ❌ Free-text name of the **provider's own** staff member who looks after the centre (area/operations manager). It is not an Xplor staff field. Filled on only 4/18 centres, all older ones (`Shanti`, `Brian Hammett` ×2, `Hamish`). The names match Woodlands people: SuperAdmin 292 / ProviderUser 17109 Brian Hammett, and ProviderUser 777 Hamish Rotstein. OWNA centres have no manager text field. OWNA models an area manager as a `superusers` account whose `credentials[]` list the centres they can access, and the importer builds that from ProviderUser + ProviderUserCenter (§7.2). Do not use this text to grant access. |
+| type (`LDC`, `Hybrid`, blank) | `servicetype` (+ `oshc`) | 🔁 **Approved (D20).** `LDC → LDC`; `Hybrid → LDCBASC` + `oshc:true`; blank or any other value → reject the centre (`UnsupportedServiceType`). Every centre then gets an OSHC evidence check that emits a warning on mismatch without changing the mapped value. Never write `OSHC`. See *Service type* below. |
+| submission_type (`fees`/`room`) | — | ❌ Checked, not mapped. Undocumented in Xplor's public help. It most likely selects whether a centre's fees and sessions are driven by the fee catalogue or by room settings. The nearest documented behaviour is Xplor's weekly Starting Blocks submission, which sends the median of the fees attached to a room, or the centre default fee ([Starting Blocks – Xplor](https://support.ourxplor.com/hc/en-us/articles/4410622613913-Starting-Blocks)). This is inferred, not confirmed. In the data, `fees` is on all 15 live centres. `room` is only on 1556, 1594 and 2953, which were created in 2017–18, are inactive and have no rooms, bookings or ledger. `fees` matches OWNA's model (`centres.feesmatrix:true`, each `roomsfees` entry carrying its own `sessionofcare`; §6.3). Rule: `fees` → OK; `room` or any other value → warning `UnsupportedSubmissionType`, because the fee/session model may not match. It is a warning, not a rejection. |
 | capacity | `approvedplaces` | ✅ int; `0` → omit. |
 | timezone_name (IANA `Australia/Melbourne`) | `timezone` | 🔁 IANA→Windows id (`AUS Eastern Standard Time`) via `TimeZoneMapper` as InfoCare does. |
 | ccs_enabled | `ccss` | 🔁 set `true` only when 1; otherwise omit. |
@@ -294,23 +311,134 @@ Only centres present in the approved centre mapping are imported. Four source ce
 | state_id | `state` | 🔁 lookup → `VIC` etc. |
 | country_id | `country` | 🔁 lookup → full name (`Australia`). |
 | address_latitude / address_longitude | `lat`, `lng` | 🔁 double; `0.0` → omit (Portal geocodes later). |
-| contact_first_name / contact_last_name | `approvedprovider.contact` | ⚠ only if this is the approved-provider contact. |
-| contact_email | `email` | ✅ lower-case. |
-| contact_phone | `phone` | ✅ |
-| status (1/0) | `closed` | 🔁 `0 → closed:true` only for an explicitly mapped inactive centre. |
+| contact_first_name / contact_last_name | — | ❌ OWNA centres have no field for the centre's contact person. `approvedprovider.contact` holds the **Provider** contact (§5.1). In this export the names are often just the centre name split in two (e.g. "Woodlands" / "Sunbury"). |
+| contact_email | `email` | ✅ lower-case. The centre's own contact email. |
+| contact_phone | `phone` | ✅ The centre's own contact phone. |
+| (Provider contact) | `approvedprovider.contact`, `approvedprovider.phone`, `approvedprovider.email` | 🔁 from Provider.csv; see §5.1 *Provider contact*. |
+| status (1/0) | — (never `closed`) | 🔁 Xplor `status` means **account enabled/disabled**, not open/closed.<br>• **`0` → reject the centre** with `CentreInactiveInSource`. The 4 such centres (1556, 1594, 2953, 100113) never operated: each has 1 child record, no rooms/bookings/ledger, and was abandoned in 2019, or on 2024-08-07 when 100113 was replaced by 100623.<br>• **`1` → import normally** (if in the centre mapping); no field is written.<br>• **The importer never writes `centres.closed`.** In OWNA, closing a centre is a Console lifecycle action that cascades (`OwnaConsole/_o_/centre-edit.aspx.cs:1584-1611`): it sets `package:"Freemium"`, `deactivatedate`/`deactivatedby`, marks staff `inactive`, parents `inactivate` and children `attending:false`, disables rooms, hibernates checklists, and clears document expiries. About 20 Console jobs and reports then skip `closed` centres (auto-billing, CCS payments, occupancy, emails, API). Writing `closed:true` directly would leave the centre half-closed.<br>• `status = 1` does not prove a centre is operating: retired or dormant centres still show `1` (2958 HQ, 78711 "OLD-NOT DO USE", 53645, and the empty shells). Exclude those through the centre mapping (D1), not through this field. |
 | date_created | `dateadded` | ✅ `SetOnInsert`. |
 | date_last_modified | `lastupdated` | 🔁 import time, not source time. |
-| CenterDetails.acecqa_id (`SE-…`) | `serviceapprovalnumber` | ✅ (ACECQA service approval number). |
-| CenterDetails.proda_id | `providerapprovalnumber` | ⚠ PRODA org id ≠ provider approval number (`PR-…`). Confirm before mapping; otherwise ❌. |
+| CenterDetails.acecqa_id (`SE-…`) | `serviceapprovalnumber` | ✅ trimmed. Both fields hold the NQF **service approval number** issued by the state regulator and published on the ACECQA register (`SE-` + 8 digits). It is filled for 8/14 rows and matches the register (e.g. SE-40010051 = Sunbury). OWNA labels it "Service Approval Number" (`Portal/_centre/centre-info.aspx:284`); the dominant OWNADEV format is `AA-99999999`. OWNA prints it on regulatory outputs: arrival, KIMS, Start Strong and ACT preschool reports (`_centre/reporting/*.aspx.cs`), QIP, worker register, staff compliance snapshot, CWA signing. **Duplicate rule:** 2958 Woodlands HQ and 3815 Truganina both carry SE-40014895. If one number appears on more than one imported centre, write it only to the centre with `capacity > 0` and warn `DuplicateServiceApprovalNumber` on the others. |
+| CenterDetails.proda_id | — | ❌ 🔒 Not imported; listed (redacted) in the run report for the onboarding team. Filled once, for Sunbury: a 10-digit **PRODA RA (Organisation) ID**, the Services Australia B2B identity used to register CCS software devices. It is **not** the NQF provider approval number, and must not go into `centres.providerapprovalnumber` (`PR-…`), which OWNA prints on the QIP and regulatory returns. OWNA's home for it is **`ccss.prodaorgid`**, "PRODA RA (Organisation) ID*" (`Portal/_centre/ccss.aspx:97`; OWNADEV format `9999999999` in 2,015/2,017 docs). The `ccss` collection is OWNA's CCS integration setup: device name, activation code, private key, tokens and CCMS credentials. Portal uses `prodaorgid` straight away to request tokens from Services Australia (`ccss.aspx.cs:147`, `CcssFunction.RefreshToken`), and OWNA creates the document when the centre activates its PRODA device. The importer does not write `ccss` (see `ccs_enabled`). |
+| — | `providerapprovalnumber` | ❌ No Xplor source: neither Provider.csv nor CenterDetails holds a `PR-…` number. Left unset; the centre enters it on Portal Centre Info. |
 | CenterDetails.legacy_id, group | — | ❌ empty in export. |
 | CenterDetails.weeks_in_past_can_edit_bookings | — | ❌ no OWNA equivalent (empty anyway). |
 | CenterDetails.is_enrolment_auto_invite_family | — | ❌ Xplor workflow flag. |
 
-Fields OWNA needs that Xplor does not provide (set on insert only, per Console `centre-add.aspx.cs` defaults): `feesmatrix:true`, `transactionalinvoice:true`, `openingtime`/`closingtime` (derive min/max of Room start/finish), `sessiontimes[]` (distinct `HH:mm-HH:mm` from Fee start/finish — required for `roomsfees.sessionofcare` dropdowns), `package`, feature flags. ⚠ creating brand-new centres through the importer vs. pre-creating them in Console is a centre-mapping decision; **recommended: pre-create in Console and map**, importer only fills the fields above that are empty.
+**Service type (`Center.type`).**
+
+*What Xplor means.* "Hybrid" is Xplor's **"LDC/OSHC Hybrid"** centre type: one service offering both long day care and outside-school-hours care. Xplor customer case studies list it as the "Centre Type" ([Little Nuggets ELC](https://www.ourxplor.com/little-nuggets-elc-case-study), [Little Learners Place](https://www.ourxplor.com/success-stories/little-learners-place-oshc-case-study/)). Xplor's help centre does not document the value further.
+
+*OWNA options.*
+
+| OWNA `servicetype` | Console label | Behaviour |
+|---|---|---|
+| `LDC` | Long Day Care | — |
+| `LDCBASC` | LDC with B/ASC | Also sets `centres.oshc:true` (`OwnaConsole/_o_/centre-add.aspx.cs:269`, `onboarding-signups.aspx.cs:892`). The flag enables the OSHC views in the dashboard, rostering and staff compliance snapshot (`Portal/_centre/dashboard.aspx.cs:161`, `rostering-interval.aspx.cs:81`, `staff-compliance-snapshot.aspx.cs:1213`). CCS estimates keep the LDC hourly cap. Occupancy stats group it with LDC (`occupancy-stats.aspx.cs:224`). |
+| `OSHC` | OSHC | Sets `oshc:true` **and** switches the CCS estimate to the OSHC hourly cap ($13.30 instead of $15.19, `Portal/_centre/children-enrolment.aspx.cs:444`). |
+
+*What the export shows.*
+- **The label looks like a setup default.** All 7 centres created between 2024-03-21 and 2024-07-16 are `Hybrid`, and no centre created outside that window is. The next centre, 100623 (2024-08), is `LDC` again.
+- **The two operating Hybrid centres look like pure LDC.** Warragul (90784) and Boronia (93806) have only 0–5-year rooms, only 0–5-year active children, and 6–12-hour daily fees. Neither has BSC/ASC rooms or fees; their vacation-care fees also exist at LDC centres.
+- **Four Hybrid centres are empty shells** with no rooms and no bookings: Wallan 88798, Craigieburn 90783, Grovedale 93807, Werribee 94541. The seventh, 100113, is inactive (`status = 0`). These are exclusion candidates under D1.
+- **Real school-age care shows up under an `LDC` label.** Roxburgh Park (3670) has an "After School Care 15:00–18:00" fee and active children aged 6–8.
+
+*Rule (approved, D20): map, find evidence, emit warning.*
+1. **Map deterministically:**
+   - `LDC → servicetype:"LDC"`.
+   - `Hybrid → servicetype:"LDCBASC"` + `oshc:true`.
+   - blank or any other value → **reject the centre** with `UnsupportedServiceType`. OWNA requires a service type: Console refuses to create a centre without one ("Please select a Service Type!", `OwnaConsole/_o_/centre-add.aspx.cs:54-58`), and the value sets feature defaults at creation (sleep check, nappies, sunscreen, bottles, meals; `centre-add.aspx.cs:227-237`). In this export only the inactive centres 1556 and 2953 are blank. As with any rejected centre, rows that depend on them are rejected with `CentreNotMapped`.
+2. **Find evidence.** In every run (dry run and import), count per centre:
+   - active children aged 6+;
+   - rooms or fees that look like before/after-school care (session ending ≤ 09:30 or starting ≥ 14:30, or a name containing `OSHC`, `BSC`, `ASC`, `Before School`, `After School`);
+   - bookings on those fees.
+
+   Record the counts in the run report.
+3. **Emit a warning, never override.** A mismatch produces a warning. The mapped value stays as step 1 set it:
+   - `HybridWithoutOshcEvidence` — Hybrid with no evidence (the centre may really be LDC);
+   - `LdcWithOshcEvidence` — LDC with evidence (the centre may really be LDCBASC).
+4. **Pre-created centres keep their OWNA `servicetype`** and `oshc` flag. The importer does not overwrite them and reports any difference from the mapped value as `ServiceTypeDiffersFromOwna`.
+5. **Never write `OSHC`.** It changes the CCS hourly cap and is not a valid mapping for either Xplor value.
+
+*Expected warnings for this export:* `HybridWithoutOshcEvidence` for Warragul (90784) and Boronia (93806); `LdcWithOshcEvidence` for Roxburgh Park (3670). The four empty Hybrid shells (88798, 90783, 93807, 94541) have no evidence either, so they also get `HybridWithoutOshcEvidence` if they are imported (D1).
+
+*Risk.* An unnecessary `LDCBASC` only shows extra OSHC screens. A missed `LDCBASC` hides them. Neither affects CCS calculations. A wrong `OSHC` does.
+
+### 5.2.1 Constructing a new centre
+
+The importer is a **standalone app**: it never calls Console, Portal, OwnaHQ or the InfoCare service. It creates each centre directly in MongoDB. A new centre document follows **Console's defaults** (`OwnaConsole/_o_/centre-add.aspx.cs:51-126` validation, `:191-378` document) with a few **InfoCare Integration behaviours** (`OWNAxInfoCareIntergration/…/CentreMigrationService.cs`, `StaffMigrationService.CreateSupportStaffAsync`).
+
+All fields below are written with `SetOnInsert` (except the Xplor-mapped fields, which follow their §5.2 rows). A rerun therefore never resets settings the centre has changed since go-live.
+
+**Checks before creating (Console rules):**
+
+| Check | Rule | Failure |
+|---|---|---|
+| Service type | Must map to an OWNA value (D20) | reject `UnsupportedServiceType` |
+| Name | Must be unique across `centres`; Console also blocks similar names (first 10 characters, same state) | exact match → reject `CentreNameConflict`; similar match → warning `SimilarCentreNameExists` (listed in the dry-run report for the operator) |
+| Alias | Generated (see below) and must be unique | reject `CentreAliasConflict` |
+
+**A. Mapped from Xplor** (rules in the §5.2 rows above): `name`, `address`, `suburb`, `state`, `postcode`, `country`, `timezone` (IANA → Windows), `phone`, `email`, `servicetype` + `oshc`, `groupid`/`group`, `approvedplaces`, `serviceapprovalnumber`, `ccss`, `lat`/`lng`, `approvedprovider.*`, plus `sourcetype = "Xplor"` and `externalid = Center.id`.
+
+**B. Fields Xplor does not provide:**
+
+| OWNA field | Value | Source of the rule |
+|---|---|---|
+| `alias` | `{name lower-cased, letters/digits only}{4-digit deterministic suffix of name + Center.id}`; `ctr{suffix}` if the cleaned name is shorter than 3 characters | InfoCare `GenerateAlias`. Deterministic, so a rerun produces the same alias. |
+| `package` | `"Premium"` | InfoCare. Fixed. |
+| `pricingpackage` | not written | InfoCare (Console writes it, but only 0% of recent Console centres in OWNADEV have it). |
+| `location` (weather region) | Default per state, using Console's dropdown values: `VIC → "Melbourne"`, `NSW → "Sydney"`, `QLD → "Brisbane"`, `SA → "Adelaide"`, `WA → "Perth"`, `TAS → "Hobart"`, `NT → "Darwin"`, `ACT → "Canberra"`. Unknown state → reject `UnsupportedState`. | Console `ddWeather` list (`centre-add.aspx:150-252`). Not InfoCare's `"Suburb, State"`, which is not a dropdown value. |
+| `openingtime` / `closingtime` | `"06:00"` / `"18:00"` | InfoCare. Fixed. |
+| `sessiontimes[]` | Distinct `"HH:mm-HH:mm"` from the centre's non-deleted Xplor Fee `start_time`/`finish_time`, sorted | Required: `roomsfees.sessionofcare` must be one of these (§6.3). Console does not set it; InfoCare uses a fixed list, which would not contain the Xplor fee sessions. |
+| `mobile`, `websiteurl` | `""` | Console (blank form fields). Xplor has one phone only. |
+| `logo` | `""` | Console with no upload; Portal shows its default. |
+| `onesignalappid`, `onesignalrestapikey`, `iosappurl`, `androidappurl` | Console's AU platform defaults, read from importer **configuration** (the REST API key from the **secret provider**). Never hard-coded or logged. | Console (`centre-add.aspx.cs:170-189, 272-292`) |
+| `onlinepayment` | `false` | InfoCare. The centre enables it when its payment gateway is set up. |
+| `feesmatrix`, `transactionalinvoice` | `true`, `true` | Console. InfoCare omits them, but the imported fees need fees-matrix mode (§6.3). |
+| `casualbookings` | `true` | Console: `package != "Freemium"` |
+| UI flags | Console defaults. Service-type rules evaluated for `LDC`/`LDCBASC` (neither is `OSHC` nor `Preschool`). | Console (`centre-add.aspx.cs:216-258`) |
+| `features[]` | Console's non-Freemium SKU list for the service type and state (below) | Console (`centre-add.aspx.cs:296-371`). Not InfoCare's single `devicesigninout` entry. |
+| `seifa`, `pricingpackage`, `menureplication`, gateway/Xero/Mailchimp settings | not written | No source. The centre configures them in OWNA. |
+| `tagsadmin[]` | `[{id, tag}]` of the **XPLOR** centre tag (below) | InfoCare `AssignSourceTypeTagAsync` pattern |
+| `dateadded`, `lastupdated` | import time (UTC) | Console / InfoCare |
+
+**UI flags written (Console defaults, `LDC`/`LDCBASC`):**
+- **`true`:** `nonattendance`, `newsletters`, `changepin`, `showattendances`, `showsleepcheck`, `sleepcheckbuttons`, `nappychanges`, `nappygrouping`, `filterrooms`, `sunscreenfeature`, `bottlesfeature`, `portions`, `shownotes`, `showbreakfast`, `showmorningtea`, `showafternoontea`, `showlatesnack`, `showwater`, `showmilk`, `sleeprest2`, `sleeprest3`, `tagportfolio`, `taglearningoutcomes`, `tagnqs`, `curriculumprogramming`, `commenting`, `parenttagstaff`.
+- **`false`:** `loyaltyprogram`, `documentgrouping`, `childrenfullname`, `waitinglist`, `showlunch2`, `showbottles`, `bottlescounter`, `showsunscreen`, `privatepostdefault`, `draftpostdefault`, `parentcantagchildren`.
+
+The mapper keeps the full Console rule table (including the `OSHC`/`Preschool` exceptions), so a future service type needs no code change.
+
+**`features[]` (`{sku, feature}`) for `Premium` + `LDC`/`LDCBASC`:** `postsunlimited`, `incidentreport`, `casualbookings`, `staffdocuments`, `staffdiary`, `medicationreport`, `gallery20`, `polls`, `eventsrsvp`, `checklistalerts`, `draft`, `privatenotes`, `adsoff`, `rostering`, `formbuilder`, `boards`, `developmentalsummary`, `stafftimesheets`, `excursionforms`, `hazardlog`, `staffmeetings`, `handover`, `customtags`, `achievementchecklists`, `sleepcheckalerts`, `principlespractice`, `theorists`, `devmilestones`, `8aboriginalways`, `phoenixcups`. Add `kindyoutcomes` when `state = QLD`. (`mtop` is OSHC-only; not added.) The `feature` labels are copied verbatim from Console.
+
+**C. XPLOR source tag** (`tags` collection, `type: "centres"`)
+1. **Find** the tag whose `tag` starts with `XPLOR` (case-insensitive).
+2. **If none exists, create it once:** `{type:"centres", tag:"XPLOR", background, textcolour, dateadded}`, following the shape Console's Centre Tags page writes (`centre-tags.aspx.cs`; existing examples `KIDSOFT`, `INFOCARE 🧸`). Use a fixed colour pair from configuration. This is a find-or-insert, so reruns never duplicate it.
+3. **Add** `{id: <tag _id hex>, tag: <tag label>}` to the centre's `tagsadmin[]` only if it is not already there.
+
+**D. Side effects of creating a centre**
+
+| Side effect | Behaviour | Source |
+|---|---|---|
+| **App Support ghost admin** in `staff` | One per centre, upserted on `(sourcetype, externalid = "support_{ownaCentreId}", centreid)`. Fields: `firstname:"App"`, `surname:"Support"`, `stafftype:"admin"`, `ghost:true`, `email`/`emailaddress` = `{alias}@owna.com.au`, `profile:""`, `picture:""`, `centreid`, `centre`. PIN, password and salt are `SetOnInsert` and follow OWNA's shared support-login convention (Console and InfoCare both use the same fixed support PIN/password). The importer reads them from the **secret provider**, never hard-codes or logs them. | InfoCare `CreateSupportStaffAsync` (keying), Console (`centre-add.aspx.cs:380-404`) |
+| "In Centre" fallback room | **Not created.** Every Xplor booking resolves to a real room, except the 5 `room_id = 0` rows, which are rejected. | Differs from InfoCare |
+| Emails / notifications | **None.** Console emails OWNA staff for confirmed similar-name duplicates; the importer never sends email. | Architecture rule: no fire-and-forget side effects |
+
+**E. Existing OWNA centres.** If the centre mapping points an Xplor centre at an existing OWNA `_id`, the importer does not create it and does not apply B–D. It only fills Xplor-mapped fields that are empty, merges the derived `sessiontimes[]` into the existing list, and adds the XPLOR tag. It keeps the existing `servicetype`, `alias`, `package` and flags.
 
 ### 5.3 CenterUser.csv → ❌ not mapped
 
-A CenterUser is Xplor's *shared login for a centre* (`username`, `email`, `phone`, address). OWNA has **no centre-level credential** — staff log in individually against `staff` (`Portal/portal/auth/login/default.aspx.cs:226-242`) and `centres` holds no credentials. Its contact data duplicates `Center.contact_*`. Do not import; if the centre needs a generic admin account, create it manually in OWNA.
+A CenterUser is Xplor's **shared login account for a centre**. The export shows this in three ways:
+
+- **One account per centre.** There are 18 CenterUser rows for 18 centres. `CenterUser.username` equals `Center.username` and `CenterUser.email` equals `Center.contact_email` for every centre. The usernames are unique and never collide with ProviderUser or SuperAdmin usernames. One of them is an email address.
+- **It acts in Xplor.** In AuditLog the account is `role_id = 3` (§16, *Xplor user roles*). In the first 150k rows it records 588 real operations, such as `BOOKING_FUZZY_ATTENDANCE_CHECK_IN`, `BOOKING_SET_ATTENDANCE_CHECK_OUT` and attempted casual bookings. It also created 115 EducatorBookingRequests. The actions are logged under the contact's display name, not under an individual educator.
+- **It holds no credentials in the export.** There are no password hashes, so the account could not be carried over even if OWNA had a matching concept.
+
+**Why it is not mapped:** OWNA has **no centre-level credential**. Staff log in individually against `staff` (`Portal/portal/auth/login/default.aspx.cs:226-242`), and `centres` holds no credentials. The contact data duplicates `Center.contact_*`, which is already mapped in §5.2.
+
+**Consequences:**
+- Do not import the account, and do not map `username` to `centres.alias` (§5.2).
+- If the centre needs a generic admin login, OWNA staff create it manually as a `staff` document with `stafftype:"admin"`.
+- Historical actions by this account (e.g. attendance sign-ins it recorded) resolve to no OWNA user. Under D12 they are attributed to `"Xplor Import"`.
 
 ---
 
@@ -327,7 +455,7 @@ A CenterUser is Xplor's *shared login for a centre* (`username`, `email`, `phone
 | name | `roomname` | 🔁 replace `/`→`-`, `&`→`and` (Portal rule); must be unique within the centre (duplicates exist in export, e.g. two "Kinder" rooms at different centres — fine; same-centre duplicate → reject). |
 | room_number | `order` | 🔁 display order (1..n). Also the **join key for `Child.default_room_id`** (see §8.1). |
 | type (1–5) | `roomtype` | ⚠ Xplor code is an undocumented age band (1≈nursery … 4/5≈kinder, also used for "Kitchen"/"Community"). OWNA `roomtype ∈ {LDC, PRESCHOOL, BSC, ASC, VAC}`. No safe mapping → omit unless Xplor confirms the enum (then 4/5→`PRESCHOOL`?, 1–3→`LDC`). |
-| start_time / finish_time | — | ❌ OWNA rooms have no opening hours. Use min/max across rooms to seed `centres.openingtime/closingtime` only when those are empty. |
+| start_time / finish_time | — | ❌ OWNA rooms have no opening hours. Not used for the centre either: a new centre gets fixed `openingtime`/`closingtime` `06:00`/`18:00` (§5.2.1). |
 | age_from / age_to (`"1 Year 3 Month"`) | `agemin` / `agemax` | 🔁 parse to **months as a string** (`"15"`). OWNA UI only offers `0,3,6,12,18,24,30,36,42,48,60,72`; store the exact month value and warn if not in that list (it still works in `casualbookingagerange` logic). Blank → omit. |
 | staff_ratio (4, 11, 0) | `ratio` | ✅ int (children per educator, 1:N); `0` → omit. |
 | status (1 active / 2 inactive) | `disabled` | 🔁 `2 → disabled:true`; `1` → omit. ⚠ confirm `2` semantics. |
@@ -881,7 +1009,7 @@ OWNA has **no currency collection or field**; the platform assumes AUD for child
 | **Currency** | No currency model in OWNA; AUD assumed (§13.3). |
 | **Country** | OWNA already has a global `countries` lookup; Xplor table used as lookup only (§13.1). |
 | **CenterUser** | OWNA has no shared centre login; data duplicates Center contact (§5.3). |
-| **SuperAdmin** | Xplor vendor / integration accounts (e.g. `…@myxplor.com`, `…-API`). OWNA's equivalent is `consoleusers` (OWNA's own staff). Importing would grant Xplor-side identities access to OWNA. |
+| **SuperAdmin** | Provider-level super-admin and integration accounts. They are **mostly the provider's, not Xplor's**. The `phone_no` column actually holds an organisation label. 1 of the 6 rows is Xplor's own (`…@myxplor.com`, label "Xplor"). The other 5 are Woodlands-side: Brian Hammett, "API User", "Woodlands Connect", "Woodlands TechSuccess", and an external contractor, all labelled "Woodland ELC"/"Woodlands". Reasons not to import: most are shared or API identities, not people; no credentials are exported; and the real person here (Brian Hammett) also exists as a ProviderUser, so any OWNA access for him comes through §7.2. A super-admin who needs OWNA access gets a `superusers` account created and approved by OWNA staff, not generated by the importer. SuperAdmin is still needed as a lookup for `role_id = 4` (§16, *Xplor user roles*). |
 | **Xplorer** | Xplor consumer-app (parent app) identities. OWNA has no global parent identity — parent logins live on per-centre `parents` docs. Password hashes are not portable. At most, use as a secondary email source for Guardian (⚠, not recommended). |
 | **AuditLog** | 1.8 GB of Xplor-internal events (`BOOKING_*`, `NOTIFICATION_ADD_OBSERVATIONS`). OWNA `systemlog` (audit DB) uses a fixed `audittype` enum and OWNA user ids; importing would fabricate OWNA-side provenance. Archive the CSV with the run artefacts instead. |
 | **PrimaryCarerChangeHistory** | OWNA keeps only the current `relationship.primarycarer` flag; there is no history collection. 210 of 275 rows are already soft-deleted. Open decision: drop, or archive as a file. |
@@ -914,7 +1042,7 @@ These are not mappings but will break a "correct" mapping if ignored.
 
 | # | Decision | Recommendation in this report | Blocks |
 |---|---|---|---|
-| D1 | Centre mapping + records with no destination centre | Pre-create centres in Console; mapping file Xplor `Center.id` → OWNA `_id`; reject unmapped. Exclude the 4 `status=0` centres. | All phases |
+| D1 | Centre mapping + records with no destination centre | The mapping file maps each Xplor `Center.id` to either `create` (the importer builds the centre itself, §5.2.1; the importer is standalone and never calls Console) or an existing OWNA `_id` (fill-empty only, §5.2.1 E). Reject unmapped centres. Exclude the 4 `status=0` centres. | All phases |
 | D2 | Educator → centre assignment (no source link) | Derive from attendance/booking activity + ProviderUserCenter email match, then operator review. | §7.1 |
 | D3 | Staff identity across centres / ProviderUser ↔ Educator merge | One `staff` per centre; one `superusers` per ProviderUser; merge on exact email only with operator confirmation. | §7 |
 | D4 | Guardian email conflicts | Generated usernames; raw email → `emailaddress`. | §8.4 |
@@ -925,7 +1053,7 @@ These are not mappings but will break a "correct" mapping if ignored.
 | D9 | BookingPatternProposal/Creation retention | Current-state only; do not import. | §9.2 |
 | D10 | PrimaryCarerChangeHistory retention | Do not import; archive CSV. | §14 |
 | D11 | v1 scope: AuditLog, SuperAdmin, Xplorer, CenterUser | Not imported. | §14 |
-| D12 | Polymorphic created/modified/deleted-by links | Drop; use `staff:"Xplor Import"`. Resolve only `Attendance.checked_in/out_by` (Guardian/Educator). | §10.2, §11.5 |
+| D12 | Polymorphic created/modified/deleted-by links | Drop; use `staff:"Xplor Import"`. Resolve only `Attendance.checked_in/out_by` (Guardian/Educator). If a link is ever resolved, use the role map below. | §10.2, §11.5, *Xplor user roles* |
 | D13 | QKFS → OWNA Kindy | Blocked; tables empty here. | §12 |
 | D14 | Xplor enums with no documentation: `Room.type`, `Room.status`, `Child.status=4`, `Educator.status`, `ParentBookingRequest.type`, `GuardianScheduledPayment.payment_status`, `Attendance.is_active` | Confirm with Xplor before mapping; until then reject/omit as stated per row. | §6, §7, §8, §10 |
 | D15 | Source datetime timezone | Treat as UTC (profiled evidence); confirm with Xplor. | §10 |
@@ -933,6 +1061,27 @@ These are not mappings but will break a "correct" mapping if ignored.
 | D17 | Fees: `ADMIN` visibility and unused fees | Import `ADMIN`/deleted fees as `archived:true` only if referenced by history; skip unused fees. | §6.3 |
 | D18 | Multiple active child discounts / fixed-amount discounts | Report for manual setup; never pick silently. | §11.5 |
 | D19 | Room images | Do not re-host in v1 (`picture:""`). | §6.1 |
+| D20 | Centre service type (`Center.type`, incl. Xplor `Hybrid` = LDC/OSHC Hybrid) | ✅ **Approved:** map, find evidence, emit warning. `LDC → LDC`; `Hybrid → LDCBASC` + `oshc:true`; blank or any other value → reject the centre (`UnsupportedServiceType`), because OWNA requires a service type. An OSHC evidence check runs on every centre and emits `HybridWithoutOshcEvidence` / `LdcWithOshcEvidence` without changing the mapped value. Never write `OSHC`. Pre-created centres keep their existing value. | §5.2 |
+
+### Xplor user roles (reference for D12)
+
+Several Xplor tables record who did something as a pair: `*_by_role_id` plus `*_by_user_id` (AuditLog `role_id` + `user_id`; Discount and ChildDiscount `created_by_*`, `updated_by_*`, `deleted_by_*`, `archived_by_*`). The user id alone is ambiguous because it points to different tables depending on the role. The role map below was inferred from the data by looking up each `user_id` in every user table. It is not taken from Xplor documentation.
+
+| role_id | Xplor user table | Rows observed in AuditLog (first 150k) | Also seen in | OWNA target if ever resolved |
+|---|---|---:|---|---|
+| 1 | none (no matching user table; likely system/automated) | 737 | ChildDiscount (1) | none: attribute to `"Xplor Import"` |
+| 2 | ProviderUser | 8,423 | Discount (29), ChildDiscount (1,268) | `staff` of the acting centre (via `superusers.credentials[]`, §7.2) |
+| 3 | CenterUser | 588 | — | none: no OWNA equivalent (§5.3) |
+| 4 | SuperAdmin | 1,955 | Discount (22), ChildDiscount (18) | none: provider super-admin / API account, not imported (§14) |
+| 5 | ProviderUser | 1,778 | Discount (9), ChildDiscount (5) | as role 2 (⚠ the difference between roles 2 and 5 is unknown; possibly a ProviderUser `type`) |
+| 6 | Educator | 68,857 | — | `staff` (§7.1) |
+| 7 | Guardian | 67,154 (+494 unresolved ids) | — | `parents` (§8.4) |
+| 8 | none | 14 | — | none: attribute to `"Xplor Import"` |
+
+Every non-null user id matched exactly one table for its role. Educator and Guardian id ranges do not overlap in this export. Rules if a link is resolved:
+- **Resolve by pair.** Resolve with both `role_id` and `user_id`, never with `user_id` alone.
+- **Unknown role.** An unknown `role_id`, or an id missing from its table, becomes `"Xplor Import"` with a warning.
+- **Confirm first.** ⚠ Confirm the map with Xplor before any mapper relies on it (D14).
 
 ---
 
