@@ -448,24 +448,50 @@ A CenterUser is Xplor's **shared login account for a centre**. The export shows 
 
 (Aligns with the reviewer's annotated screenshot: green = mapped, red = no direct field.)
 
+**Filter first.** Only rooms with `status = 1` whose centre is imported (D1) are candidates. The 10 rooms of the rejected centre 100113 fall out with their centre.
+
 | Xplor field | OWNA field | Rule |
 |---|---|---|
 | id | `externalid` | ✅ `{id}::{center_id}`. `_id` is new (`SetOnInsert`). |
 | center_id | `centreid`, `centre` | 🔁 resolve centre → `_id` hex + centre name. |
-| name | `roomname` | 🔁 replace `/`→`-`, `&`→`and` (Portal rule); must be unique within the centre (duplicates exist in export, e.g. two "Kinder" rooms at different centres — fine; same-centre duplicate → reject). |
-| room_number | `order` | 🔁 display order (1..n). Also the **join key for `Child.default_room_id`** (see §8.1). |
-| type (1–5) | `roomtype` | ⚠ Xplor code is an undocumented age band (1≈nursery … 4/5≈kinder, also used for "Kitchen"/"Community"). OWNA `roomtype ∈ {LDC, PRESCHOOL, BSC, ASC, VAC}`. No safe mapping → omit unless Xplor confirms the enum (then 4/5→`PRESCHOOL`?, 1–3→`LDC`). |
+| name | `roomname` | 🔁 trim; replace `/`→`-`, `&`→`and` (Portal rule, `room-view.aspx.cs:386`). Must be unique within the centre: Portal refuses duplicates on add and edit. The export has 7 same-centre duplicate pairs (Sanggol at 2958, Kinder at 53645, and Walert, Marram, Bunjil, Wurundjeri, Kindergarten at 93806). In every pair one room is `status = 2`, so the status skip removes them all. A duplicate that survives the skip → reject both with `DuplicateRoomNameInSource`. |
+| room_number | `order` | 🔁 display order (1..n) for a new centre; see "Existing centre" below. Also the **join key for `Child.default_room_id`** (see §8.1). |
+| type (1–5) | `roomtype` | ❌ omit until Xplor confirms what the codes mean. |
 | start_time / finish_time | — | ❌ OWNA rooms have no opening hours. Not used for the centre either: a new centre gets fixed `openingtime`/`closingtime` `06:00`/`18:00` (§5.2.1). |
-| age_from / age_to (`"1 Year 3 Month"`) | `agemin` / `agemax` | 🔁 parse to **months as a string** (`"15"`). OWNA UI only offers `0,3,6,12,18,24,30,36,42,48,60,72`; store the exact month value and warn if not in that list (it still works in `casualbookingagerange` logic). Blank → omit. |
-| staff_ratio (4, 11, 0) | `ratio` | ✅ int (children per educator, 1:N); `0` → omit. |
-| status (1 active / 2 inactive) | `disabled` | 🔁 `2 → disabled:true`; `1` → omit. ⚠ confirm `2` semantics. |
-| image (`photos/room_icon/...`) | `picture` | ⚠ relative Xplor storage path, not a URL. Either download and re-host to OWNA GCS, or set `""`. Recommend `""` for v1. |
+| age_from / age_to (`"1 Year 3 Month"`) | `agemin` / `agemax` | 🔁 parse to **whole months, stored as a string** (`"1 Year 3 Month"` → `"15"`). Blank → omit.<br>**Round to OWNA's list** `0,3,6,12,18,24,30,36,42,48,60,72`: `agemin` rounds **down**, `agemax` rounds **up** (72 = "5y+"), with warning `RoomAgeRangeRounded` (Xplor and OWNA values in the details).<br>Reason: Portal's room edit page sets `ddAgeRangeMin/Max.SelectedValue` to the stored value without checking it is in the list (`room-edit.aspx.cs:480-490`). A value outside the list throws, so the page can no longer open.<br>Values rounded in this export: `agemin` 1, 2 → 0 and 21 → 18; `agemax` 15 → 18, 29 → 30 and 71 → 72. |
+| staff_ratio (4, 11, 0) | `ratio` | ✅ int (children per educator, 1:N), mapped as given; `0` → omit.<br>OWNA treats `ratio` as an **override** ("Override ACECQA Child/Carer Ratio"). When it is absent, OWNA works out the staff needed from each child's age and the centre's state (`dashboard.aspx.cs:729`; VIC: 1:4 under 36 months, 1:11 from 36 months). Xplor's 4/11 match those VIC bands.<br>Warning `RoomRatioOverridesAgeBands` when the room's age range crosses 36 months (e.g. COMMUNITY at 3815: 1m–5y11m, ratio 11), because the override then applies one ratio to every age in the room. |
+| status (1 active / 2 inactive) | — | 🔁 `1` → import. `2` → **skip the room** with warning `RoomInactiveInSource` (room id, name, centre).<br>Evidence: all 11 `status = 2` rooms have 0 SessionBookings, 0 BookingPatterns, 0 children (`default_room_id`) and 0 CasualBookingRules.<br>Rows in other tables that reference a skipped room (e.g. RoomCapacity for 10092 and 9929) are skipped with `RoomNotImported`. Any booking, pattern or child that references a skipped room → reject with `RoomNotImported` so the dry run surfaces it.<br>The importer never writes `disabled`. Portal will not disable a room while attending children are in it (`room-view.aspx.cs:317-324`). |
+| image (`photos/room_icon/...`) | `picture` | 🔁 always `""` (D19). The Xplor value is a relative storage path, not a URL, and room images are not re-hosted. Portal always writes the key (`room-view.aspx.cs:401`). |
 | date_created | `dateadded` | ✅ `SetOnInsert`. |
 | date_last_modified | `lastupdated` | 🔁 import time. |
-| (from RoomCapacity) | `capacity` | 🔁 see §6.2. Required ≥ 0. |
-| — | `rate` | 🔁 `0.0` (legacy field; fees matrix is on). |
+| (from RoomCapacity) | `capacity` | 🔁 see §6.2. Required ≥ 0: Portal refuses to save a room without it (`room-view.aspx.cs:354-373`). Every `status = 1` room has a RoomCapacity row in this export; a missing one → reject with `RoomCapacityMissing`. |
+| — | `rate` | 🔁 `0.0` (legacy field; fees matrix is on). Same as InfoCare. |
 
-Not populated from Xplor: `roomleaders[]` (no source), `fees[]`/`feechange[]` (legacy, superseded by `roomsfees`), `excluderatio`, `staffonly` (⚠ could set `staffonly:true` for "Kitchen"/"Ed. Leader" rooms — operator decision).
+**Not populated from Xplor:**
+- `roomleaders[]` (no source).
+- `fees[]`/`feechange[]` (legacy, superseded by `roomsfees`).
+- `description`, `noqldfreekindy` (no source).
+- `excluderatio`, `staffonly`: the importer does not set these. Xplor has no source for them.
+
+#### Creating and editing rooms
+
+Portal is the reference for what a room must look like (`room-view.aspx.cs:340-447` add, `room-edit.aspx.cs:660-763` edit). The write pattern follows InfoCare (`RoomMigrationService.cs:35-104`): a native upsert with `SetOnInsert` for immutable fields. Console's centre creation makes no rooms, so a centre the importer creates starts with none.
+
+**Identity:** `sourcetype:"Xplor"` + `externalid:"{Room.id}::{center_id}"`.
+
+**Fields written on every upsert:**
+- `SetOnInsert`: `_id`, `dateadded`, `sourcetype`, `externalid`.
+- `Set`: `roomname`, `centreid`, `centre`, `order`, `capacity`, `picture`, `rate`, `lastupdated`.
+- `Set`, or `Unset` when there is no value: `ratio`, `agemin`, `agemax`.
+
+| Case | Behaviour |
+|---|---|
+| **Centre mapped to `create`** | Insert every candidate room. `order` = `room_number`. |
+| **Rerun: a room with the same `externalid` exists** | Update it in place with the fields above. A rename needs no extra code: the later children, enrolments and attendances phases copy `roomname`/`room` from the room document. That is the same cascade Portal does on rename (`room-edit.aspx.cs:756-763`). |
+| **Existing OWNA centre, no stamped match, no OWNA room with that name** | Insert. `order` = the centre's current highest `order` + `room_number`, so existing rooms keep their positions. |
+| **Existing OWNA centre, no stamped match, an unstamped OWNA room has the same name** | Reject with `RoomNameConflict`. We never match by name ("Resolve X", §4.1), and Portal forbids duplicate names. To reuse that room, the operator maps it in the mapping file's `rooms` map (D1). |
+| **Room mapped in `rooms` (`"<Xplor Room.id>": "<OWNA room _id>"`)** | The mapped OWNA room must belong to the destination centre, otherwise reject with `RoomMappingCentreMismatch`. Fill-empty only (`capacity`, `ratio`, `agemin`/`agemax`). `roomname` and `order` are never changed. No `sourcetype`/`externalid` stamp, the same as an existing centre (§5.2.1 E). Later phases resolve the room through the mapping on every run. |
+| **An Xplor room missing from a later export** | Nothing happens. The importer never deletes or disables rooms (non-destructive default). |
 
 ### 6.2 RoomCapacity.csv → `rooms.capacity` (+ optional `roomscapacity`)
 
@@ -524,8 +550,8 @@ OWNA resolves a price at attendance time as *roomsfees price overridden by the l
 | Xplor field | OWNA field | Rule |
 |---|---|---|
 | room_id | target `rooms` doc | 🔁 only `is_active=1 AND is_deleted=0` (21 of 51 rows). |
-| fee_id | `casualbookingfeesmatrixid`, `casualbookingfee` | 🔁 resolve room fee; fee = `feecasual ?? fee`. |
-| time_start / time_finish | `casualbookingsession` | 🔁 `"HH:mm-HH:mm"`. |
+| fee_id | `casualbookingfeesmatrixid`, `casualbookingfee`, `casualbookingsession` | 🔁 resolve the room fee (§6.3), then set all three from it, as Portal does (`casual-bookings.aspx.cs:2297-2316`):<br>• `casualbookingfeesmatrixid` = the fee `_id`;<br>• `casualbookingfee` = `feecasual ?? fee`;<br>• `casualbookingsession` = the fee `sessionofcare`.<br>OWNA copies `casualbookingsession` into auto-published casual attendances as `sessionofcare` (`CustomFunction.cs:3547-3548`), so it must match the fee. Fee not resolved → write none of the three, warning `CasualBookingFeeNotResolved`. |
+| time_start / time_finish | — | ❌ not mapped. In all 21 active rules they equal the room opening hours (Room start/finish), and in none do they equal the session of the rule's own fee (e.g. rule 06:30–18:30, fee 07:00–17:00). Writing them to `casualbookingsession` would give casual attendances a session no room fee has. |
 | age_start_year/month, age_finish_year/month | `casualbookingagerange:true` (+ room `agemin/agemax`) | ⚠ OWNA only filters by the *room's* age range. Set the flag only when the rule's range equals the room's range; otherwise warn. |
 | days_of_week (`1,2,3,4,5`) | — | ❌ no per-day field; OWNA auto-publishes weekdays only, which matches every observed row. Other values → warning. |
 | center_id | — | used for validation. |
@@ -1042,7 +1068,7 @@ These are not mappings but will break a "correct" mapping if ignored.
 
 | # | Decision | Recommendation in this report | Blocks |
 |---|---|---|---|
-| D1 | Centre mapping + records with no destination centre | The mapping file maps each Xplor `Center.id` to either `create` (the importer builds the centre itself, §5.2.1; the importer is standalone and never calls Console) or an existing OWNA `_id` (fill-empty only, §5.2.1 E). Reject unmapped centres. Exclude the 4 `status=0` centres. | All phases |
+| D1 | Centre mapping + records with no destination centre | The mapping file maps each Xplor `Center.id` to either `create` (the importer builds the centre itself, §5.2.1; the importer is standalone and never calls Console) or an existing OWNA `_id` (fill-empty only, §5.2.1 E). Reject unmapped centres. Exclude the 4 `status=0` centres.<br>Per centre, an optional `rooms` map `{ "<Xplor Room.id>": "<OWNA room _id>" }` reuses an existing OWNA room (fill-empty, not stamped) instead of creating one. This is the only way past `RoomNameConflict`. | All phases |
 | D2 | Educator → centre assignment (no source link) | Derive from attendance/booking activity + ProviderUserCenter email match, then operator review. | §7.1 |
 | D3 | Staff identity across centres / ProviderUser ↔ Educator merge | One `staff` per centre; one `superusers` per ProviderUser; merge on exact email only with operator confirmation. | §7 |
 | D4 | Guardian email conflicts | Generated usernames; raw email → `emailaddress`. | §8.4 |
@@ -1060,7 +1086,7 @@ These are not mappings but will break a "correct" mapping if ignored.
 | D16 | Health/consent fields with no `children` field (practitioner, ambulance cover, religion, prescriptions, form declarations) | Do not import; archive; revisit if OWNA adds fields. | §8.2, §8.3 |
 | D17 | Fees: `ADMIN` visibility and unused fees | Import `ADMIN`/deleted fees as `archived:true` only if referenced by history; skip unused fees. | §6.3 |
 | D18 | Multiple active child discounts / fixed-amount discounts | Report for manual setup; never pick silently. | §11.5 |
-| D19 | Room images | Do not re-host in v1 (`picture:""`). | §6.1 |
+| D19 | Room images | ✅ **Approved:** do not re-host; always write `picture:""`. | §6.1 |
 | D20 | Centre service type (`Center.type`, incl. Xplor `Hybrid` = LDC/OSHC Hybrid) | ✅ **Approved:** map, find evidence, emit warning. `LDC → LDC`; `Hybrid → LDCBASC` + `oshc:true`; blank or any other value → reject the centre (`UnsupportedServiceType`), because OWNA requires a service type. An OSHC evidence check runs on every centre and emits `HybridWithoutOshcEvidence` / `LdcWithOshcEvidence` without changing the mapped value. Never write `OSHC`. Pre-created centres keep their existing value. | §5.2 |
 
 ### Xplor user roles (reference for D12)
